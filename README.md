@@ -12,8 +12,9 @@ The project has been bootstrapped with `uv` [https://docs.astral.sh/uv/](https:/
 Get necessary csv data and place it in root's `data` folder. All csv files in `data` folder are gitignored.
 Following are base data files:
 
-- `parkings_parking.2025-02-06.csv`
-- ...
+- `parkings_main.csv`
+- `artukainen_rain.csv`
+- `artukainen_temperature.csv`
 
 ### uv
 
