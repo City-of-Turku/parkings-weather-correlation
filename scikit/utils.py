@@ -23,7 +23,7 @@ HOUR_SIN = "hour_sin"
 RAIN="rain"
 TEMPERATURE="temperature"
 ONEHOT_SCALER_COLUMNS = [HOUR, MONTH, DAY_OF_WEEK]
-STANDAR_SCALER_COLUMNS = [RAIN, TEMPERATURE, YEAR]
+STANDARD_SCALER_COLUMNS = [RAIN, TEMPERATURE, YEAR]
 
 SEASONABILITY_COLUMNS = [YEAR, MONTH, DAY_OF_WEEK, DAY_OF_YEAR, HOUR, HOUR_SIN]
 SEASONABILITY_COLUMNS = [YEAR, MONTH_SIN, DAY_OF_WEEK_SIN, HOUR_SIN]
@@ -92,15 +92,15 @@ def get_weather_data(rain_threshold=3.0) -> Tuple[pd.DataFrame, pd.DataFrame]:
     return df_rain, df_temperature
        
 
-def get_pipeline(feature_columns: list) -> Pipeline:
+def get_pipeline(standard_columns=STANDARD_SCALER_COLUMNS, onehot_colums=ONEHOT_SCALER_COLUMNS) -> Pipeline:
     preprocessor = ColumnTransformer(
         transformers=[
-            ("onehot", OneHotEncoder(handle_unknown="ignore"), ONEHOT_SCALER_COLUMNS),
-            ("Standard", StandardScaler(), STANDAR_SCALER_COLUMNS)
+            ("onehot", OneHotEncoder(handle_unknown="ignore"), onehot_colums),
+            ("Standard", StandardScaler(), standard_columns)
         
         ],
-        remainder="passthrough"    
-    )  
+        force_int_remainder_cols=False
+    )
     pipeline = Pipeline(steps=[
         ("preprocessor", preprocessor),
         ("regressor", LinearRegression())
@@ -130,6 +130,27 @@ def compare_test_with_predicition(pipeline: Pipeline, X_test: pd.Series, y_test:
     ax.grid(True)
     ax.legend()
     return pipeline
+
+
+def predict(pipeline: Pipeline, date_range: pd.DatetimeIndex, rain=None, temperature=None) -> pd.DataFrame:
+    X_future = pd.DataFrame(index=date_range)
+    if rain is not None:
+        X_future["rain"] = rain
+    if temperature is not None:
+        X_future["temperature"] = temperature
+    X_future = add_seasonability_columns(X_future)
+    predictions = pipeline.predict(X_future)
+    df_predictions = pd.DataFrame(predictions, columns=["num_parkings"])
+    df_predictions.index=date_range
+    return df_predictions
+
+
+def plot_predictions(df_predictions):
+    fig, ax = plt.subplots(figsize=(16, 4.5))
+    df_predictions.plot(ax=ax, marker="x")   
+    ax.grid(True)
+    ax.legend()
+
 
 def print_metrics(test: pd.DataFrame, pred: pd.DataFrame):
     aligned = test.join(pred, how="inner")
