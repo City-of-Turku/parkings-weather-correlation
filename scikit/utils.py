@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from typing import Tuple
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
+from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.compose import ColumnTransformer
@@ -16,11 +16,18 @@ MONTH = "month"
 MONTH_SIN = "month_sin"
 MONTH_COS = "month_cos"
 DAY_OF_WEEK="dayofweek"
-DAY_OF_YEAR="day"
+DAY_OF_WEEK_SIN = "day_of_week_sin"
+DAY_OF_YEAR="day_of_year"
 HOUR="hour"
 HOUR_SIN = "hour_sin"
+RAIN="rain"
+TEMPERATURE="temperature"
+ONEHOT_SCALER_COLUMNS = [HOUR, MONTH, DAY_OF_WEEK]
+STANDAR_SCALER_COLUMNS = [RAIN, TEMPERATURE, YEAR]
 
 SEASONABILITY_COLUMNS = [YEAR, MONTH, DAY_OF_WEEK, DAY_OF_YEAR, HOUR, HOUR_SIN]
+SEASONABILITY_COLUMNS = [YEAR, MONTH_SIN, DAY_OF_WEEK_SIN, HOUR_SIN]
+SEASONABILITY_COLUMNS = [YEAR, MONTH, DAY_OF_WEEK, HOUR]
 
 
 def add_seasonability_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -34,6 +41,8 @@ def add_seasonability_columns(df: pd.DataFrame) -> pd.DataFrame:
         df[MONTH_COS] = np.cos(2 * np.pi * df["month"] / 12)
     if DAY_OF_WEEK in SEASONABILITY_COLUMNS:
         df[DAY_OF_WEEK] = df.index.dayofweek
+    if DAY_OF_WEEK_SIN in SEASONABILITY_COLUMNS:
+        df[DAY_OF_WEEK_SIN] = np.sin(2 * np.pi * df["day_of_week"] / 7)
     if DAY_OF_YEAR in SEASONABILITY_COLUMNS:
         df[DAY_OF_YEAR] = df.index.dayofyear
     if HOUR in SEASONABILITY_COLUMNS:
@@ -86,7 +95,8 @@ def get_weather_data(rain_threshold=3.0) -> Tuple[pd.DataFrame, pd.DataFrame]:
 def get_pipeline(feature_columns: list) -> Pipeline:
     preprocessor = ColumnTransformer(
         transformers=[
-            ("onehot", OneHotEncoder(handle_unknown="ignore"), feature_columns)
+            ("onehot", OneHotEncoder(handle_unknown="ignore"), ONEHOT_SCALER_COLUMNS),
+            ("Standard", StandardScaler(), STANDAR_SCALER_COLUMNS)
         
         ],
         remainder="passthrough"    
@@ -112,11 +122,17 @@ def compare_test_with_predicition(pipeline: Pipeline, X_test: pd.Series, y_test:
     df_pred = pd.DataFrame(predictions_test, columns=["pred"])
     df_pred.index = df_test.index
     assert len(df_pred) == len(df_test)
+    print_metrics(df_test, df_pred)
     fig, ax = plt.subplots(figsize=(16, 4.5))
-    ax.set_title("Test data(o) vs. Prediction(x)")
+    ax.set_title("Test data(o) vs. Predictions(x)")
     df_pred.plot(ax=ax, marker="x")
     df_test.plot(ax=ax, marker="o")
     ax.grid(True)
     ax.legend()
     return pipeline
+
+def print_metrics(test: pd.DataFrame, pred: pd.DataFrame):
+    aligned = test.join(pred, how="inner")
+    print(f"mean squared error: {mean_squared_error(aligned["num_parkings"], aligned["pred"])}")
+    print(f"mean absolute percentage error {mean_absolute_percentage_error(aligned["num_parkings"], aligned["pred"])}")
 
