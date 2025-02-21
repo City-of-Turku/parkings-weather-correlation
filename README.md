@@ -26,7 +26,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 Test everything works:
 
 ```bash
-uv run hello.py
+uv run main.py
 ```
 
 Update used packages by running:
