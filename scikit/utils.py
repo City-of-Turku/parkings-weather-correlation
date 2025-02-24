@@ -21,9 +21,16 @@ HOUR="hour"
 HOUR_SIN = "hour_sin"
 RAIN="rain"
 TEMPERATURE="temperature"
+BASE = "base"
+DRY_WEATHER ="dry weather"
+MINUS_20 = "-20 degrees temperature"
+MINUS_10 = "-10 degrees temperature"
+ZERO = "0 degrees temperature"
+PLUS_10 = "10 degrees temperature"
+PLUS_20 = "20 degrees temperature"
 ONEHOT_SCALER_COLUMNS = [HOUR, MONTH, DAY_OF_WEEK]
 STANDARD_SCALER_COLUMNS = [RAIN, TEMPERATURE, YEAR]
-SEASONABILITY_COLUMNS = [YEAR, MONTH, DAY_OF_WEEK, DAY_OF_YEAR, HOUR, HOUR_SIN]
+EASONABILITY_COLUMNS = [YEAR, MONTH, DAY_OF_WEEK, DAY_OF_YEAR, HOUR, HOUR_SIN]
 SEASONABILITY_COLUMNS = [YEAR, MONTH_SIN, DAY_OF_WEEK_SIN, HOUR_SIN]
 SEASONABILITY_COLUMNS = [YEAR, MONTH, DAY_OF_WEEK, HOUR]
 
@@ -126,6 +133,7 @@ def compare_test_with_predicition(pipeline: Pipeline, X_test: pd.Series, y_test:
     df_pred.index = df_test.index
     assert len(df_pred) == len(df_test)
     fig, ax = plt.subplots(figsize=(16, 4.5))
+    print_metrics(df_test, df_pred)
     ax.set_title("Test data(o) vs. Predictions(x)")
     df_pred.plot(ax=ax, marker="x")
     df_test.plot(ax=ax, marker="o")
@@ -160,5 +168,15 @@ def plot_predictions(df_predictions: pd.DataFrame, title=None):
 def print_metrics(test: pd.DataFrame, pred: pd.DataFrame):
     aligned = test.join(pred, how="inner")
     print(f"mean squared error: {mean_squared_error(aligned["num_parkings"], aligned["predictions"])}")
-    print(f"mean absolute percentage error {mean_absolute_percentage_error(aligned["num_parkings"], aligned["predictions"])}")
+    #print(f"mean absolute percentage error {mean_absolute_percentage_error(aligned["num_parkings"], aligned["predictions"])}")
+
+def print_results(date_range, results):
+    print(f"Forecast period: {date_range.min()} - {date_range.max()}")
+    base_total = results[BASE][1]
+    for key, value in results.items():
+        if key==BASE:
+            print(f"Base forecast for parkings: {value[1]}.")
+
+        else:    
+            print(f"Forecast for parkings in {key}: {value[1]}.  Diff to base {value[1] - base_total}")
 
