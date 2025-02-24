@@ -132,7 +132,7 @@ def compare_test_with_predicition(pipeline: Pipeline, X_test: pd.Series, y_test:
     return pipeline
 
 
-def predict(pipeline: Pipeline, date_range: pd.DatetimeIndex, rain=None, temperature=None) -> pd.DataFrame:
+def predict(pipeline: Pipeline, date_range: pd.DatetimeIndex, rain=None, temperature=None) -> Tuple[pd.DataFrame, int]:
     X_future = pd.DataFrame(index=date_range)
     if rain is not None:
         X_future["rain"] = rain
@@ -142,10 +142,10 @@ def predict(pipeline: Pipeline, date_range: pd.DatetimeIndex, rain=None, tempera
     predictions = pipeline.predict(X_future)
     df_predictions = pd.DataFrame(predictions, columns=["num_parkings"])
     df_predictions.index=date_range
-    return df_predictions
+    return df_predictions, round(df_predictions["num_parkings"].sum())
 
 
-def plot_predictions(df_predictions):
+def plot_predictions(df_predictions: pd.DataFrame):
     fig, ax = plt.subplots(figsize=(16, 4.5))
     df_predictions.plot(ax=ax, marker="x")   
     ax.grid(True)
