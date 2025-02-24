@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error, mean_absolute_percentage_error
 
 
-
 YEAR = "year"
 MONTH = "month"
 MONTH_SIN = "month_sin"
@@ -24,7 +23,6 @@ RAIN="rain"
 TEMPERATURE="temperature"
 ONEHOT_SCALER_COLUMNS = [HOUR, MONTH, DAY_OF_WEEK]
 STANDARD_SCALER_COLUMNS = [RAIN, TEMPERATURE, YEAR]
-
 SEASONABILITY_COLUMNS = [YEAR, MONTH, DAY_OF_WEEK, DAY_OF_YEAR, HOUR, HOUR_SIN]
 SEASONABILITY_COLUMNS = [YEAR, MONTH_SIN, DAY_OF_WEEK_SIN, HOUR_SIN]
 SEASONABILITY_COLUMNS = [YEAR, MONTH, DAY_OF_WEEK, HOUR]
@@ -92,7 +90,12 @@ def get_weather_data(rain_threshold=3.0) -> Tuple[pd.DataFrame, pd.DataFrame]:
     return df_rain, df_temperature
        
 
-def get_pipeline(standard_columns=STANDARD_SCALER_COLUMNS, onehot_colums=ONEHOT_SCALER_COLUMNS) -> Pipeline:
+def get_pipeline(
+        regressor,
+        standard_columns=STANDARD_SCALER_COLUMNS, 
+        onehot_colums=ONEHOT_SCALER_COLUMNS, 
+    ) -> Pipeline:
+    
     preprocessor = ColumnTransformer(
         transformers=[
             ("onehot", OneHotEncoder(handle_unknown="ignore"), onehot_colums),
@@ -103,7 +106,7 @@ def get_pipeline(standard_columns=STANDARD_SCALER_COLUMNS, onehot_colums=ONEHOT_
     )
     pipeline = Pipeline(steps=[
         ("preprocessor", preprocessor),
-        ("regressor", LinearRegression())
+        ("regressor", regressor)
     ])
     return pipeline
 
@@ -119,10 +122,9 @@ def fit_model(pipeline: Pipeline, df: pd.DataFrame, feature_columns: list) -> Tu
 def compare_test_with_predicition(pipeline: Pipeline, X_test: pd.Series, y_test: pd.Series):
     predictions_test = pipeline.predict(X_test)
     df_test = pd.DataFrame({"num_parkings": y_test["num_parkings"]})
-    df_pred = pd.DataFrame(predictions_test, columns=["pred"])
+    df_pred = pd.DataFrame(predictions_test, columns=["predictions"])
     df_pred.index = df_test.index
     assert len(df_pred) == len(df_test)
-    print_metrics(df_test, df_pred)
     fig, ax = plt.subplots(figsize=(16, 4.5))
     ax.set_title("Test data(o) vs. Predictions(x)")
     df_pred.plot(ax=ax, marker="x")
@@ -145,8 +147,11 @@ def predict(pipeline: Pipeline, date_range: pd.DatetimeIndex, rain=None, tempera
     return df_predictions, round(df_predictions["num_parkings"].sum())
 
 
-def plot_predictions(df_predictions: pd.DataFrame):
+def plot_predictions(df_predictions: pd.DataFrame, title=None):
+
     fig, ax = plt.subplots(figsize=(16, 4.5))
+    if title is not None:
+        ax.set_title(title)
     df_predictions.plot(ax=ax, marker="x")   
     ax.grid(True)
     ax.legend()
@@ -154,6 +159,6 @@ def plot_predictions(df_predictions: pd.DataFrame):
 
 def print_metrics(test: pd.DataFrame, pred: pd.DataFrame):
     aligned = test.join(pred, how="inner")
-    print(f"mean squared error: {mean_squared_error(aligned["num_parkings"], aligned["pred"])}")
-    print(f"mean absolute percentage error {mean_absolute_percentage_error(aligned["num_parkings"], aligned["pred"])}")
+    print(f"mean squared error: {mean_squared_error(aligned["num_parkings"], aligned["predictions"])}")
+    print(f"mean absolute percentage error {mean_absolute_percentage_error(aligned["num_parkings"], aligned["predictions"])}")
 
