@@ -2,12 +2,13 @@ import pandas as pd
 import numpy as np
 from typing import Tuple
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
+from sklearn.neural_network import MLPRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.compose import ColumnTransformer
+from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
 import matplotlib.pyplot as plt
-from sklearn.metrics import mean_squared_error, mean_absolute_percentage_error
+from sklearn.metrics import mean_squared_error
 
 
 YEAR = "year"
@@ -117,11 +118,38 @@ def get_pipeline(
     ])
     return pipeline
 
+def mlp_parameter_tuning(X_train: pd.Series, y_train: pd.Series):
+    param_grid = {
+        "hidden_layer_sizes": [(50,), (50,25),(50, 25, 10), (50, 25,10, 5), (32, 16, 4),],
+        "activation": ["relu", "tanh"],
+        "solver": ["adam", "lbfgs"],
+        "alpha": [0.0001, 0.001, 0.01],
+        "learning_rate": ["constant", "adaptive"],
+        "max_iter": [250, 500, 1000,2000]
+    }
+    mlp = MLPRegressor(random_state=42)
+    # TimeSeriesSplit for cross-validation
+    tscv = TimeSeriesSplit(n_splits=5)
+    # GridSearchCV with TimeSeriesSplit
+    grid_search = GridSearchCV(estimator=mlp, param_grid=param_grid, cv=tscv, scoring="neg_mean_squared_error", n_jobs=-1)
+    grid_search.fit(X_train, y_train)
+    best_params = grid_search.best_params_
+    print("Best parameters found: ", best_params)
 
-def fit_model(pipeline: Pipeline, df: pd.DataFrame, feature_columns: list) -> Tuple[pd.Series, pd.Series]:
+
+def fit_model(
+        pipeline: Pipeline, 
+        df: pd.DataFrame, 
+        feature_columns: list, 
+        tune_mlp_parameters=False
+    ) -> Tuple[pd.Series, pd.Series]:
     X = df[feature_columns]
     y = df[["num_parkings"]]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
+    if tune_mlp_parameters:
+        mlp_parameter_tuning(X_train, y_train)
+    if isinstance(pipeline["regressor"], MLPRegressor):
+        y_train = np.array(y_train).ravel()
     pipeline.fit(X_train, y_train)
     return X_test, y_test
 
@@ -167,7 +195,6 @@ def plot_predictions(df_predictions: pd.DataFrame, title=None):
 def print_metrics(test: pd.DataFrame, pred: pd.DataFrame):
     aligned = test.join(pred, how="inner")
     print(f"mean squared error: {mean_squared_error(aligned["num_parkings"], aligned["predictions"])}")
-    #print(f"mean absolute percentage error {mean_absolute_percentage_error(aligned["num_parkings"], aligned["predictions"])}")
 
 
 def print_results(date_range: pd.DatetimeIndex, results: dict):
@@ -188,15 +215,18 @@ def get_filtered_merged_data(parkings_file:str, zone=1) -> Tuple[pd.DataFrame, p
     # clean data by removing early data days without cars
     hourly_parkings = hourly_parkings[hourly_parkings["ds"]> "2024-5-20"]
     df_rain, df_temperature = get_weather_data()
-    hourly_parking = pd.merge(hourly_parkings, df_rain, on="ds", how='left')
-    hourly_parking = pd.merge(hourly_parking, df_temperature, on="ds", how='left')
+    hourly_parking = pd.merge(hourly_parkings, df_rain, on="ds", how="left")
+    hourly_parking = pd.merge(hourly_parking, df_temperature, on="ds", how="left")
     hourly_parking.head()
     df = hourly_parking.copy()
     df.set_index("ds", inplace=True)
-    df_rain_train = pd.merge(hourly_parkings, df_rain, on="ds", how='left')
+    df_rain_train = pd.merge(hourly_parkings, df_rain, on="ds", how="left")
     df_rain_train.set_index("ds", inplace=True)
-    df_temperature_train = pd.merge(hourly_parkings, df_temperature, on="ds", how='left')
+    df_temperature_train = pd.merge(hourly_parkings, df_temperature, on="ds", how="left")
     df_temperature_train.set_index("ds", inplace=True)
+    df = add_seasonability_columns(df)
+    df_rain_train = add_seasonability_columns(df_rain_train)
+    df_temperature_train = add_seasonability_columns(df_temperature_train)
     return df, df_rain_train, df_temperature_train
 
 
