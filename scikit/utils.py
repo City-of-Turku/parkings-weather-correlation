@@ -137,7 +137,7 @@ def compare_test_with_predicition(pipeline: Pipeline, X_test: pd.Series, y_test:
     ax.set_title("Test data(o) vs. Predictions(x)")
     df_pred.plot(ax=ax, marker="x")
     df_test.plot(ax=ax, marker="o")
-    ax.grid(True)
+    ax.grid(True, which="both")
     ax.legend()
     return pipeline
 
@@ -156,12 +156,11 @@ def predict(pipeline: Pipeline, date_range: pd.DatetimeIndex, rain=None, tempera
 
 
 def plot_predictions(df_predictions: pd.DataFrame, title=None):
-
     fig, ax = plt.subplots(figsize=(16, 4.5))
     if title is not None:
         ax.set_title(title)
-    df_predictions.plot(ax=ax, marker="x")   
-    ax.grid(True)
+    df_predictions.plot(ax=ax, marker="o")   
+    ax.grid(True, which="both")
     ax.legend()
 
 
@@ -170,7 +169,8 @@ def print_metrics(test: pd.DataFrame, pred: pd.DataFrame):
     print(f"mean squared error: {mean_squared_error(aligned["num_parkings"], aligned["predictions"])}")
     #print(f"mean absolute percentage error {mean_absolute_percentage_error(aligned["num_parkings"], aligned["predictions"])}")
 
-def print_results(date_range, results):
+
+def print_results(date_range: pd.DatetimeIndex, results: dict):
     print(f"Forecast period: {date_range.min()} - {date_range.max()}")
     base_total = results[BASE][1]
     for key, value in results.items():
@@ -180,3 +180,26 @@ def print_results(date_range, results):
         else:    
             print(f"Forecast for parkings in {key}: {value[1]}.  Diff to base {value[1] - base_total}")
 
+def get_filtered_merged_data(parkings_file:str, zone=1) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    df_parkings = get_parkings_df(parkings_file)
+    parkings_in_zone = get_parkings_in_zone(df_parkings, 1)
+    print(f"Found {len(parkings_in_zone)} parkings in zone")
+    hourly_parkings = get_hourly_parkings(parkings_in_zone)
+    # clean data by removing early data days without cars
+    hourly_parkings = hourly_parkings[hourly_parkings["ds"]> "2024-5-20"]
+    df_rain, df_temperature = get_weather_data()
+    hourly_parking = pd.merge(hourly_parkings, df_rain, on="ds", how='left')
+    hourly_parking = pd.merge(hourly_parking, df_temperature, on="ds", how='left')
+    hourly_parking.head()
+    df = hourly_parking.copy()
+    df.set_index("ds", inplace=True)
+    df_rain_train = pd.merge(hourly_parkings, df_rain, on="ds", how='left')
+    df_rain_train.set_index("ds", inplace=True)
+    df_temperature_train = pd.merge(hourly_parkings, df_temperature, on="ds", how='left')
+    df_temperature_train.set_index("ds", inplace=True)
+    return df, df_rain_train, df_temperature_train
+
+
+def draw_results(results):
+    for key, value in results.items():
+        plot_predictions(value[0], title=f"Predictions for {key}")
