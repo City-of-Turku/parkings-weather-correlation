@@ -32,10 +32,8 @@ PLUS_10 = "10 degrees temperature"
 PLUS_20 = "20 degrees temperature"
 ONEHOT_SCALER_COLUMNS = [HOUR, MONTH, DAY_OF_WEEK]
 STANDARD_SCALER_COLUMNS = [RAIN, TEMPERATURE, YEAR]
-EASONABILITY_COLUMNS = [YEAR, MONTH, DAY_OF_WEEK, DAY_OF_YEAR, HOUR, HOUR_SIN]
-SEASONABILITY_COLUMNS = [YEAR, MONTH_SIN, DAY_OF_WEEK_SIN, HOUR_SIN]
 SEASONABILITY_COLUMNS = [YEAR, MONTH, DAY_OF_WEEK, HOUR]
-
+RAIN_VALUE = 3
 
 def add_seasonability_columns(df: pd.DataFrame) -> pd.DataFrame:
     if YEAR in SEASONABILITY_COLUMNS:
@@ -88,7 +86,7 @@ def get_hourly_parkings(parkings: pd.DataFrame) -> pd.DataFrame:
     return hourly_parking
 
 
-def get_weather_data(rain_threshold=3.0) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def get_weather_data(rain_threshold=RAIN_VALUE) -> Tuple[pd.DataFrame, pd.DataFrame]:
     df_rain = pd.read_csv("../data/artukainen_rain.csv")
     df_rain["timestamp"] = pd.to_datetime(df_rain["timestamp"])
     df_rain_bool = df_rain.copy()   
@@ -130,6 +128,7 @@ def mlp_parameter_tuning(X_train: pd.Series, y_train: pd.Series):
         "learning_rate": ["constant", "adaptive"],
         "max_iter": [250, 500, 1000,2000]
     }
+    y_train = np.array(y_train).ravel()
     mlp = MLPRegressor(random_state=42)
     # TimeSeriesSplit for cross-validation
     tscv = TimeSeriesSplit(n_splits=5)
@@ -164,7 +163,7 @@ def compare_test_with_predicition(pipeline: Pipeline, X_test: pd.Series, y_test:
     df_pred.index = df_test.index
     assert len(df_pred) == len(df_test)
     fig, ax = plt.subplots(figsize=(16, 4.5))
-    print_metrics(df_test, df_pred)
+    print_metrics(df_test, df_pred, model_name)
     ax.set_title(f"Model {model_name}, test data(o) vs. predictions(x)")
     df_pred.plot(ax=ax, marker="x")
     df_test.plot(ax=ax, marker="o")
@@ -195,9 +194,9 @@ def plot_predictions(df_predictions: pd.DataFrame, title=None):
     ax.legend()
 
 
-def print_metrics(test: pd.DataFrame, pred: pd.DataFrame):
+def print_metrics(test: pd.DataFrame, pred: pd.DataFrame, model_name: str):
     aligned = test.join(pred, how="inner")
-    print(f"mean squared error: {mean_squared_error(aligned["num_parkings"], aligned["predictions"])}")
+    print(f"mean squared error for model {model_name}: {mean_squared_error(aligned["num_parkings"], aligned["predictions"])}")
 
 
 def print_results(date_range: pd.DatetimeIndex, results: dict):
@@ -208,15 +207,22 @@ def print_results(date_range: pd.DatetimeIndex, results: dict):
             print(f"Base forecast for parkings: {value[1]}.")
 
         else:    
-            print(f"Forecast for parkings in {key}: {value[1]}.  Diff to base {value[1] - base_total}")
+            print(f"Forecast for parkings in {key}: {value[1]}.  Diff to base {value[1] - base_total} ({percent_difference(base_total, value[1])}%)")
+
 
 def get_filtered_merged_data(parkings_file:str, zone=1) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     df_parkings = get_parkings_df(parkings_file)
     parkings_in_zone = get_parkings_in_zone(df_parkings, 1)
     print(f"Found {len(parkings_in_zone)} parkings in zone")
     hourly_parkings = get_hourly_parkings(parkings_in_zone)
-    # clean data by removing early data days without cars
+    # clean data
+    # find the 99th percentile of the occupancy counts
+    percentile99 = hourly_parkings["num_parkings"].quantile(0.99)
+    # remove the outliers
+    hourly_parkings = hourly_parkings[hourly_parkings["num_parkings"] < percentile99] 
+    hourly_parkings["num_parkings"].ffill()
     hourly_parkings = hourly_parkings[hourly_parkings["ds"]> "2024-5-20"]
+    
     df_rain, df_rain_bool, df_temperature = get_weather_data()
     hourly_parking = pd.merge(hourly_parkings, df_rain, on="ds", how="left")
     hourly_parking = pd.merge(hourly_parking, df_temperature, on="ds", how="left")
@@ -236,6 +242,10 @@ def get_filtered_merged_data(parkings_file:str, zone=1) -> Tuple[pd.DataFrame, p
     return df, df_rain_train, df_rain_bool_train, df_temperature_train
 
 
-def draw_results(results):
+def draw_results(results: dict):
     for key, value in results.items():
         plot_predictions(value[0], title=f"Predictions for {key}")
+
+
+def percent_difference(old_value: float, new_value: float):
+    return round(((new_value - old_value) / old_value) * 100, 2)
