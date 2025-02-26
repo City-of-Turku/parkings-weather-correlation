@@ -21,6 +21,7 @@ DAY_OF_YEAR="day_of_year"
 HOUR="hour"
 HOUR_SIN = "hour_sin"
 RAIN="rain"
+RAIN_BOOL="rain boolean"
 TEMPERATURE="temperature"
 BASE = "base"
 DRY_WEATHER ="dry weather"
@@ -89,13 +90,15 @@ def get_hourly_parkings(parkings: pd.DataFrame) -> pd.DataFrame:
 
 def get_weather_data(rain_threshold=3.0) -> Tuple[pd.DataFrame, pd.DataFrame]:
     df_rain = pd.read_csv("../data/artukainen_rain.csv")
-    df_rain["timestamp"] = pd.to_datetime(df_rain["timestamp"])   
-    df_rain["value"] = df_rain["value"] >= rain_threshold
+    df_rain["timestamp"] = pd.to_datetime(df_rain["timestamp"])
+    df_rain_bool = df_rain.copy()   
+    df_rain_bool["value"] = df_rain_bool["value"] >= rain_threshold
+    df_rain_bool = df_rain_bool.rename(columns={"timestamp": "ds", "value": "rain"})
     df_rain = df_rain.rename(columns={"timestamp": "ds", "value": "rain"})
     df_temperature = pd.read_csv("../data/artukainen_temperature.csv")
     df_temperature["timestamp"] = pd.to_datetime(df_temperature["timestamp"])
     df_temperature = df_temperature.rename(columns={"timestamp": "ds", "value": "temperature"})
-    return df_rain, df_temperature
+    return df_rain, df_rain_bool, df_temperature
        
 
 def get_pipeline(
@@ -154,7 +157,7 @@ def fit_model(
     return X_test, y_test
 
 
-def compare_test_with_predicition(pipeline: Pipeline, X_test: pd.Series, y_test: pd.Series):
+def compare_test_with_predicition(pipeline: Pipeline, X_test: pd.Series, y_test: pd.Series, model_name=None):
     predictions_test = pipeline.predict(X_test)
     df_test = pd.DataFrame({"num_parkings": y_test["num_parkings"]})
     df_pred = pd.DataFrame(predictions_test, columns=["predictions"])
@@ -162,7 +165,7 @@ def compare_test_with_predicition(pipeline: Pipeline, X_test: pd.Series, y_test:
     assert len(df_pred) == len(df_test)
     fig, ax = plt.subplots(figsize=(16, 4.5))
     print_metrics(df_test, df_pred)
-    ax.set_title("Test data(o) vs. Predictions(x)")
+    ax.set_title(f"Model {model_name}, test data(o) vs. predictions(x)")
     df_pred.plot(ax=ax, marker="x")
     df_test.plot(ax=ax, marker="o")
     ax.grid(True, which="both")
@@ -207,14 +210,14 @@ def print_results(date_range: pd.DatetimeIndex, results: dict):
         else:    
             print(f"Forecast for parkings in {key}: {value[1]}.  Diff to base {value[1] - base_total}")
 
-def get_filtered_merged_data(parkings_file:str, zone=1) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def get_filtered_merged_data(parkings_file:str, zone=1) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     df_parkings = get_parkings_df(parkings_file)
     parkings_in_zone = get_parkings_in_zone(df_parkings, 1)
     print(f"Found {len(parkings_in_zone)} parkings in zone")
     hourly_parkings = get_hourly_parkings(parkings_in_zone)
     # clean data by removing early data days without cars
     hourly_parkings = hourly_parkings[hourly_parkings["ds"]> "2024-5-20"]
-    df_rain, df_temperature = get_weather_data()
+    df_rain, df_rain_bool, df_temperature = get_weather_data()
     hourly_parking = pd.merge(hourly_parkings, df_rain, on="ds", how="left")
     hourly_parking = pd.merge(hourly_parking, df_temperature, on="ds", how="left")
     hourly_parking.head()
@@ -222,12 +225,15 @@ def get_filtered_merged_data(parkings_file:str, zone=1) -> Tuple[pd.DataFrame, p
     df.set_index("ds", inplace=True)
     df_rain_train = pd.merge(hourly_parkings, df_rain, on="ds", how="left")
     df_rain_train.set_index("ds", inplace=True)
+    df_rain_bool_train = pd.merge(hourly_parkings, df_rain_bool, on="ds", how="left")
+    df_rain_bool_train.set_index("ds", inplace=True)
     df_temperature_train = pd.merge(hourly_parkings, df_temperature, on="ds", how="left")
     df_temperature_train.set_index("ds", inplace=True)
     df = add_seasonability_columns(df)
     df_rain_train = add_seasonability_columns(df_rain_train)
+    df_rain_bool_train = add_seasonability_columns(df_rain_bool_train)
     df_temperature_train = add_seasonability_columns(df_temperature_train)
-    return df, df_rain_train, df_temperature_train
+    return df, df_rain_train, df_rain_bool_train, df_temperature_train
 
 
 def draw_results(results):
