@@ -12,6 +12,8 @@ def get_forecast_total_sum(forecast, start_date, end_date):
     total_sum = filtered_df['yhat'].sum()
     return total_sum
 
+def percent_difference(old_value, new_value):
+    return round(((new_value - old_value) / old_value) * 100, 2)
 
 def cross_validate(model, initial, period, horizon):
     return cross_validation(model=model, 
