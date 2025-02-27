@@ -9,7 +9,6 @@ from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
-from IPython.display import display
 
 
 YEAR = "year"
@@ -176,7 +175,8 @@ def compare_test_with_predicition(pipeline: Pipeline, X_test: pd.Series, y_test:
     df_test.plot(ax=ax, marker="o")
     ax.grid(True, which="both")
     ax.legend()
-    display(pipeline)
+    return pipeline
+
 
 def predict(pipeline: Pipeline, date_range: pd.DatetimeIndex, rain=None, temperature=None) -> Tuple[pd.DataFrame, int]:
     X_future = pd.DataFrame(index=date_range)
