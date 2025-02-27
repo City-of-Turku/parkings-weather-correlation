@@ -9,6 +9,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
+from IPython.display import display
 
 
 YEAR = "year"
@@ -34,6 +35,7 @@ ONEHOT_SCALER_COLUMNS = [HOUR, MONTH, DAY_OF_WEEK]
 STANDARD_SCALER_COLUMNS = [RAIN, TEMPERATURE, YEAR]
 SEASONABILITY_COLUMNS = [YEAR, MONTH, DAY_OF_WEEK, HOUR]
 RAIN_VALUE = 3
+
 
 def add_seasonability_columns(df: pd.DataFrame) -> pd.DataFrame:
     if YEAR in SEASONABILITY_COLUMNS:
@@ -174,8 +176,7 @@ def compare_test_with_predicition(pipeline: Pipeline, X_test: pd.Series, y_test:
     df_test.plot(ax=ax, marker="o")
     ax.grid(True, which="both")
     ax.legend()
-    return pipeline
-
+    display(pipeline)
 
 def predict(pipeline: Pipeline, date_range: pd.DatetimeIndex, rain=None, temperature=None) -> Tuple[pd.DataFrame, int]:
     X_future = pd.DataFrame(index=date_range)
