@@ -3,6 +3,8 @@
 This project is for analysing and predicting parking usage rates in the City of Turku.
 Weather data is used as an extra feature to analyze correlation and improve predictions.
 
+Developed as part of European Union Horizon 2020 programme funded SCALE-UP project (grant agreement no. 955332).
+
 The project has been bootstrapped with `uv` [https://docs.astral.sh/uv/](https://docs.astral.sh/uv/).
 
 ## How to
