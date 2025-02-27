@@ -1,7 +1,7 @@
 # Parkings and weather data correlation and forecasting
 
-This project is for analysing and predicting mainly Turku City's parkings usage rates.
-Weather data is used as extra feature data to improve forecasting.
+This project is for analysing and predicting parking usage rates in the City of Turku.
+Weather data is used as an extra feature to analyze correlation and improve predictions.
 
 The project has been bootstrapped with `uv` [https://docs.astral.sh/uv/](https://docs.astral.sh/uv/).
 
@@ -16,14 +16,14 @@ Following are base data files:
 - `artukainen_rain.csv`
 - `artukainen_temperature.csv`
 
-File parkings_small.csv contains city of Turku parkings data from 2024-05-07 to 2025-02-06.
-The necessary cols of data are `time_start`, `time_end`, `zone_id` and `parking_area_id`.
+File parkings_small.csv contains city of Turku paid parkings data from 2024-05-07 to 2025-02-06.
+The necessary data columns are `time_start`, `time_end`, `zone_id` and `parking_area_id`.
 
-- `time_start` and `time_end` tell when a single parking has occurred.
+- `time_start` and `time_end` tells when a single parking has occurred.
 - `zone_id` tells which parking zone the parking was in.
-- `parking_area_id` tells which smaller parking area the parking was in.
+- `parking_area_id` tells which parking area the parking was in.
 
-Files `artukainen_rain` and `artukainen_temperature` contain hourly timestamped rain and temperature values.
+Files `artukainen_rain` and `artukainen_temperature` contains hourly timestamped rain and temperature values.
 
 ### uv
 
