@@ -68,6 +68,10 @@ def get_parkings_in_zone(df: pd.DataFrame, zone: int) -> pd.DataFrame:
     return df[df["zone_id"] == zone]
 
 
+def get_parkings_in_area(df: pd.DataFrame, area: str) -> pd.DataFrame:
+    return df[df["parking_area_id"] == area]
+
+
 def get_hourly_parkings(parkings: pd.DataFrame) -> pd.DataFrame:
     hourly_index = pd.date_range(start=parkings["time_start"].min().floor("h"),
                              end=parkings["time_end"].max().ceil("h"),
@@ -118,6 +122,7 @@ def get_pipeline(
         ("regressor", regressor)
     ])
     return pipeline
+
 
 def mlp_parameter_tuning(X_train: pd.Series, y_train: pd.Series):
     param_grid = {
@@ -210,11 +215,18 @@ def print_results(date_range: pd.DatetimeIndex, results: dict):
             print(f"Forecast for parkings in {key}: {value[1]}.  Diff to base {value[1] - base_total} ({percent_difference(base_total, value[1])}%)")
 
 
-def get_filtered_merged_data(parkings_file:str, zone=1) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def get_filtered_merged_data(parkings_file:str, zone=None, area=None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    if (zone is not None) and (area is not None):
+        raise ValueError("Exactly one of 'zone' or 'area' must be provided.")
+    
     df_parkings = get_parkings_df(parkings_file)
-    parkings_in_zone = get_parkings_in_zone(df_parkings, 1)
-    print(f"Found {len(parkings_in_zone)} parkings in zone")
-    hourly_parkings = get_hourly_parkings(parkings_in_zone)
+    if zone is not None: 
+        filtered_parkings = get_parkings_in_zone(df_parkings, zone)     
+    else:
+        filtered_parkings = get_parkings_in_area(df_parkings, area)
+
+    print(f"Filtered {len(filtered_parkings)} parkings.")
+    hourly_parkings = get_hourly_parkings(filtered_parkings)
     # clean data
     # find the 99th percentile of the occupancy counts
     percentile99 = hourly_parkings["num_parkings"].quantile(0.99)
@@ -226,7 +238,7 @@ def get_filtered_merged_data(parkings_file:str, zone=1) -> Tuple[pd.DataFrame, p
     df_rain, df_rain_bool, df_temperature = get_weather_data()
     hourly_parking = pd.merge(hourly_parkings, df_rain, on="ds", how="left")
     hourly_parking = pd.merge(hourly_parking, df_temperature, on="ds", how="left")
-    hourly_parking.head()
+
     df = hourly_parking.copy()
     df.set_index("ds", inplace=True)
     df_rain_train = pd.merge(hourly_parkings, df_rain, on="ds", how="left")
