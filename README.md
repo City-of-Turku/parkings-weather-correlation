@@ -12,9 +12,18 @@ The project has been bootstrapped with `uv` [https://docs.astral.sh/uv/](https:/
 Get necessary csv data and place it in root's `data` folder. All csv files in `data` folder are gitignored.
 Following are base data files:
 
-- `parkings_main.csv`
+- `parkings_small.csv`
 - `artukainen_rain.csv`
 - `artukainen_temperature.csv`
+
+File parkings_small.csv contains city of Turku parkings data from 2024-05-07 to 2025-02-06.
+The necessary cols of data are `time_start`, `time_end`, `zone_id` and `parking_area_id`.
+
+- `time_start` and `time_end` tell when a single parking has occurred.
+- `zone_id` tells which parking zone the parking was in.
+- `parking_area_id` tells which smaller parking area the parking was in.
+
+Files `artukainen_rain` and `artukainen_temperature` contain hourly timestamped rain and temperature values.
 
 ### uv
 
