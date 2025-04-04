@@ -262,3 +262,15 @@ def draw_results(results: dict):
 
 def percent_difference(old_value: float, new_value: float):
     return round(((new_value - old_value) / old_value) * 100, 2)
+
+
+def get_diffs(prediction: pd.DataFrame, actual: pd.DataFrame) -> Tuple[pd.DataFrame, float , float]:
+    df_diff = pd.DataFrame(
+        {"percent_diff_to_pred": round(((prediction["num_parkings"] - actual["num_parkings"]) / actual["num_parkings"]) * 100, 2),
+        "diff_to_pred": round(prediction["num_parkings"] - actual["num_parkings"], 2)}, 
+        index=actual.index
+    )
+    average_percent_diff = df_diff["percent_diff_to_pred"].mean()
+    average_diff = df_diff["diff_to_pred"].mean()
+    return df_diff, average_percent_diff, average_diff
+
