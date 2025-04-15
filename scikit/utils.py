@@ -73,9 +73,11 @@ def get_parkings_in_area(df: pd.DataFrame, area: str) -> pd.DataFrame:
     return df[df["parking_area_id"] == area]
 
 
-def get_hourly_parkings(parkings: pd.DataFrame) -> pd.DataFrame:
+def get_hourly_parkings(parkings: pd.DataFrame, time_end=None) -> pd.DataFrame:
+    if not time_end:
+        time_end = parkings["time_end"].max().ceil("h")
     hourly_index = pd.date_range(start=parkings["time_start"].min().floor("h"),
-                             end=parkings["time_end"].max().ceil("h"),
+                             end=time_end,
                              freq="h")
 
     # Initialize an empty DataFrame for hourly occupancy counts
@@ -264,13 +266,22 @@ def percent_difference(old_value: float, new_value: float):
     return round(((new_value - old_value) / old_value) * 100, 2)
 
 
+def draw_diff(df_diff: pd.DataFrame):
+    fig, ax = plt.subplots(figsize=(16, 4.5))
+    df_diff.plot(ax=ax, marker="o")   
+    ax.grid(True, which="both")
+    ax.legend()
+
+
 def get_diffs(prediction: pd.DataFrame, actual: pd.DataFrame) -> Tuple[pd.DataFrame, float , float]:
     df_diff = pd.DataFrame(
         {"percent_diff_to_pred": round(((prediction["num_parkings"] - actual["num_parkings"]) / actual["num_parkings"]) * 100, 2),
-        "diff_to_pred": round(prediction["num_parkings"] - actual["num_parkings"], 2)}, 
+        "diff_to_pred": round(prediction["num_parkings"] - actual["num_parkings"], 2), 
+        "diff_to_pred_abs": abs(round(prediction["num_parkings"] - actual["num_parkings"], 2))},
         index=actual.index
     )
+    df_diff.replace([float("inf"), float("-inf")], 0, inplace=True)
     average_percent_diff = df_diff["percent_diff_to_pred"].mean()
-    average_diff = df_diff["diff_to_pred"].mean()
+    average_diff = df_diff["diff_to_pred_abs"].mean()
     return df_diff, average_percent_diff, average_diff
 
