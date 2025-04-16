@@ -286,16 +286,19 @@ def get_diffs(prediction: pd.DataFrame, actual: pd.DataFrame) -> Tuple[pd.DataFr
     return df_diff, average_percent_diff, average_diff
 
 
-def get_actual_hourly_parkings(df_prediction: pd.DataFrame):
+def get_actual_hourly_parkings(df_prediction: pd.DataFrame, zone=None, area=None):
     df_actual = get_parkings_df("../data/pysakoinnit_2025_02_7-2025_03_09.csv")
-    df_zone1 = get_parkings_in_zone(df_actual, zone=1)
-    df_hourly_actual = get_hourly_parkings(df_zone1, time_end=pd.Timestamp("2025-03-09 11:00:00", tz="UTC"))
+    if zone is not None: 
+        filtered_parkings = get_parkings_in_zone(df_actual, zone)     
+    else:
+        filtered_parkings = get_parkings_in_area(df_actual, area)
+
+    df_hourly_actual = get_hourly_parkings(filtered_parkings, time_end=pd.Timestamp("2025-03-09 11:00:00", tz="UTC"))
     df_hourly_actual.index=df_prediction.index  
     return df_hourly_actual
 
 
-def compare_prediction_with_actual(df_prediction: pd.DataFrame):
-    df_hourly_actual = get_actual_hourly_parkings(df_prediction)
+def compare_prediction_with_actual(df_prediction: pd.DataFrame, df_hourly_actual: pd.DataFrame):
     df_diff, average_percent_diff , average_diff  = get_diffs(df_prediction, df_hourly_actual)
     print("Average percent difference: ", average_percent_diff)
     print("Average difference: ", average_diff)
