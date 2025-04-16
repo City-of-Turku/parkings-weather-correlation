@@ -305,6 +305,7 @@ def compare_prediction_with_actual(df_prediction: pd.DataFrame, df_hourly_actual
     df_results = pd.DataFrame(index=df_prediction.index)
     df_results["prediction_num_parkings"] = df_prediction["num_parkings"]
     df_results["actual_num_parkings"] = df_hourly_actual["num_parkings"]
-    # Sundays are not forecasted correctly
     draw_diff(df_results)
+    # To clarify the chart, remove the unnecessary column.
+    del df_diff["diff_to_pred_abs"]
     draw_diff(df_diff)
