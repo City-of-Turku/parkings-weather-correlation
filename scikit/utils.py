@@ -268,22 +268,21 @@ def percent_difference(old_value: float, new_value: float):
 
 def draw_diff(df_diff: pd.DataFrame):
     fig, ax = plt.subplots(figsize=(16, 4.5))
-    df_diff.plot(ax=ax, marker="o")   
+    df_diff.plot(ax=ax)   
     ax.grid(True, which="both")
     ax.legend()
 
 
 def get_diffs(prediction: pd.DataFrame, actual: pd.DataFrame) -> Tuple[pd.DataFrame, float , float]:
     df_diff = pd.DataFrame(
-        {"percent_diff_to_pred": round(((prediction["num_parkings"] - actual["num_parkings"]) / actual["num_parkings"]) * 100, 2),
-        "diff_to_pred": round(prediction["num_parkings"] - actual["num_parkings"], 2), 
-        "diff_to_pred_abs": abs(round(prediction["num_parkings"] - actual["num_parkings"], 2))},
+        {"percent_diff_to_pred": abs(round(((prediction["num_parkings"] - actual["num_parkings"]) / actual["num_parkings"]) * 100, 2)),
+        "diff_to_pred": abs(round(prediction["num_parkings"] - actual["num_parkings"], 2))},
         index=actual.index
     )
     df_diff.replace([float("inf"), float("-inf")], 0, inplace=True)
     average_percent_diff = df_diff["percent_diff_to_pred"].mean()
-    average_diff = df_diff["diff_to_pred_abs"].mean()
-    return df_diff, average_percent_diff, average_diff
+    average_diff = df_diff["diff_to_pred"].mean()
+    return df_diff, round(average_percent_diff, 2), round(average_diff, 2)
 
 
 def get_actual_hourly_parkings(df_prediction: pd.DataFrame, zone=None, area=None):
@@ -300,12 +299,10 @@ def get_actual_hourly_parkings(df_prediction: pd.DataFrame, zone=None, area=None
 
 def compare_prediction_with_actual(df_prediction: pd.DataFrame, df_hourly_actual: pd.DataFrame):
     df_diff, average_percent_diff , average_diff  = get_diffs(df_prediction, df_hourly_actual)
-    print("Average percent difference: ", average_percent_diff)
-    print("Average difference: ", average_diff)
+    print(f"Average Absolute Difference: {average_diff}")
+    print(f"Average Percentage Difference: {average_percent_diff}%")
     df_results = pd.DataFrame(index=df_prediction.index)
-    df_results["prediction_num_parkings"] = df_prediction["num_parkings"]
-    df_results["actual_num_parkings"] = df_hourly_actual["num_parkings"]
-    draw_diff(df_results)
-    # To clarify the chart, remove the unnecessary column.
-    del df_diff["diff_to_pred_abs"]
+    df_results["Predictions"] = df_prediction["num_parkings"]
+    df_results["Actual"] = df_hourly_actual["num_parkings"]
+    draw_diff(df_results) 
     draw_diff(df_diff)
